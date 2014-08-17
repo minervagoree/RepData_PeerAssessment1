@@ -1,20 +1,71 @@
-# Reproducible Research: Peer Assessment 1
+---
+title: "Reproducible Research: Peer Assessment 1"
+author: "Minerva Goree"
+date: "Saturday, August 09, 2014"
+output: html_document
+---
+### Global Options for this report
+```{r setoptions, echo=TRUE}
+        require('knitr')
+        opts_chunk$set(echo = TRUE, results = "asis")
+        options(digits=2)
+```
+
+### Loading and preprocessing the data
+```{r loadingData}
+##unzip("./activity.zip")
+activity <- read.csv("activity.csv", header=TRUE)
+#Change dates from factor to date format.
+activity$date <- as.character(as.factor(activity$date))
+activity$date <- as.Date(activity$date)
+```
+
+### What is mean total number of steps taken per day?
+```{r meanSteps}
+totalSteps <- with(activity, aggregate(steps, by=list(date), FUN=sum, na.rm=TRUE))
+names(totalSteps)<- c("date","steps")
+stepsHist <- hist(totalSteps$steps,main="Total Daily Steps Histogram",xlab="Total Daily Steps", col="blue",ylim=c(0,20),breaks=10)
+
+stepsMean <-mean(totalSteps$steps)
+stepsMedian <- median(totalSteps$steps)
+```
 
 
-## Loading and preprocessing the data
+- Daily Steps Mean: `r stepsMean`
+- Daily Steps Median: `r stepsMedian`
 
+### What is the average daily activity pattern?
+```{r dailypattern}
+activityData <- activity
+activityData$time <- sprintf("%04d:00",activityData$interval)
+activityData$time <- gsub("(\\d\\d)(\\d\\d)","\\1:\\2",activityData$time)
+activityData$dateTime <- as.POSIXct(paste(activityData$date,activityData$time),format="%Y-%m-%d %H:%M:%S")
+activityData$time <- as.POSIXct(activityData$time,format="%H:%M:%S")
+interval <- with(activityData, aggregate(steps, by=list(time), FUN=mean, na.rm=TRUE))
+names(interval)<- c('time','steps')
+plot(interval$time,interval$steps,type="l",col="blue", main="Average Daily Steps per 5 Minute Interval", xlab="Daily Interval by Hour",ylab="Steps")
+maxSteps <- which.max(interval[,2])
+maxSteps <- interval[maxSteps,]
+maxSteps$steps <- round(maxSteps$steps,digits=0)
 
+```
+The maximum steps are found on interval (time) **`r maxSteps$time `** at about **`r maxSteps$steps`** steps.
 
-## What is mean total number of steps taken per day?
+### Imputing missing values
+Calculate how many rows have missing values (NAs).
 
+```{r missingValues}
+notComplete <- activity[!complete.cases(activity),]
+notComplete2 <- nrow(notComplete)
+activityRows <- nrow(activity)
+percentIncomplete <- notComplete2/activityRows*100
+```
+The number of incomplete rows in our data set is **`r notComplete2 ` **, which is **`r percentIncomplete` **% of our total data set.
 
+To take care of the missing values I will use the mean value of each interval to fill in the missing NAs.  
+```{r fillNA}
+notCompleteData <- activity[!complete.cases(activity),]
 
-## What is the average daily activity pattern?
+```
 
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+### Are there differences in activity patterns between weekdays and weekends?
