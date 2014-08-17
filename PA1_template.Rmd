@@ -6,9 +6,11 @@ output: html_document
 ---
 ### Global Options for this report
 ```{r setoptions, echo=TRUE}
-        require('knitr')
-        opts_chunk$set(echo = TRUE, results = "asis")
-        options(digits=2)
+require('knitr')
+require(plyr)
+require(ggplot2)
+opts_chunk$set(echo = TRUE, results = "asis")
+options(digits=2)
 ```
 
 ### Loading and preprocessing the data
@@ -49,7 +51,7 @@ maxSteps <- interval[maxSteps,]
 maxSteps$steps <- round(maxSteps$steps,digits=0)
 
 ```
-The maximum steps are found on interval (time) **`r maxSteps$time `** at about **`r maxSteps$steps`** steps.
+The maximum steps are found on interval (time) **835** at about **`r maxSteps$steps`** steps.
 
 ### Imputing missing values
 Calculate how many rows have missing values (NAs).
@@ -64,8 +66,32 @@ The number of incomplete rows in our data set is **`r notComplete2 ` **, which i
 
 To take care of the missing values I will use the mean value of each interval to fill in the missing NAs.  
 ```{r fillNA}
-notCompleteData <- activity[!complete.cases(activity),]
+activityData2 <- activityData
+interval2 <- with(activityData2, aggregate(steps, by=list(interval), FUN=mean, na.rm=TRUE))
+names(interval2)<- c('interval','steps')
+activityData2$steps[is.na(activityData2$steps)] <- interval2[match(activityData2$interval, interval2$interval),2]
+totalSteps2 <- with(activityData2, aggregate(steps, by=list(date), FUN=sum, na.rm=TRUE))
+names(totalSteps2)<- c("date","steps")
+stepsHist2 <- hist(totalSteps2$steps,main="Total Daily Steps Histogram",xlab="Total Daily Steps", col="red",ylim=c(0,20),breaks=10)
+##stepsMean2 <-mean(totalSteps2$steps)
+##stepsMedian2 <- median(totalSteps2$steps)
 
 ```
 
+
 ### Are there differences in activity patterns between weekdays and weekends?
+
+```{r weekdayVsweekend}
+activityData2$DayOfTheWeek <- weekdays(activityData2$date)
+activityData2$Day <- ifelse(activityData2$DayOfTheWeek == "Sunday"|activityData2$DayOfTheWeek == "Saturday","WeekEnd","WeekDay")
+activityData2$Day <- as.factor(as.character(activityData2$Day))
+interval3 <- with(activityData2, aggregate(steps, by=list(interval,Day), FUN=mean))
+names(interval3)<- c('interval','day','steps')
+weeklyPlot <-ggplot(interval3,aes(x=interval,y=steps)) +
+        geom_line(aes(color=day), size= 1,alpha=1/2) +
+        geom_point(aes(color=day)) + 
+        facet_wrap(~ day, ncol=1)+
+        labs(x="Daily Interval by Hour (24HR Day)", y="Steps") +
+        labs(title= expression(atop("Average Steps per 5 Minute Intervals", atop("WeekDay vs. Weekend"),"")))
+print(weeklyPlot)
+```
